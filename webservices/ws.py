@@ -1,5 +1,6 @@
 import os
 from flask import Flask, jsonify, send_from_directory # Updated import
+from crud import get_db_connection, TABLE_NAME # Import necessary functions/variables from crud.py
 
 # Tell Flask where to find the static files (optional, but good for clarity)
 # The static_folder defaults to 'static'
