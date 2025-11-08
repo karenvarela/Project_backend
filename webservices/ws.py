@@ -81,7 +81,3 @@ def delete_item(item_id):
         return jsonify({"error": str(e)}), 500
     finally:
         connection.close()
-
-if __name__ == '__main__':
-    # Flask runs on port 5000 by default. 
-    app.run(host='0.0.0.0', port=5000, debug=True)
