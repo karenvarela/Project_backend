@@ -1,19 +1,16 @@
 import os
-from flask import Flask, render_template, jsonify
+from flask import Flask, jsonify, send_from_directory # Updated import
 
-app = Flask(__name__)
+# Tell Flask where to find the static files (optional, but good for clarity)
+# The static_folder defaults to 'static'
+app = Flask(__name__, static_folder='static') 
 
 # Serve the index.html from the root path
 @app.route('/')
 def index():
-    # Looks for index.html in the 'templates' folder, 
-    # but since it's in the root, we can just render it if we configure Flask.
-    # For a simple setup, we'll place index.html in the project root 
-    # and return it directly. 
-    # A more idiomatic Flask app would put it in a 'templates' folder.
-
-    # Option 1: Serve a static file directly from the root for simplicity in this dev setup
-    return app.send_static_file('index.html')
+    # Use send_from_directory to explicitly serve a file from the static folder
+    # This correctly points to your 'static/index.html'
+    return send_from_directory(app.static_folder, 'index.html')
 
 
 # Simple API endpoint for the frontend to call
@@ -27,6 +24,4 @@ def get_data():
 
 if __name__ == '__main__':
     # Flask runs on port 5000 by default. 
-    # Setting host to '0.0.0.0' makes it accessible inside the container
-    # so Codespaces can forward it.
     app.run(host='0.0.0.0', port=5000, debug=True)
