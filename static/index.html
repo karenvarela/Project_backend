@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Codespaces Web Service Demo</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Codespaces Python Web Service</h1>
+    <p>This is the frontend served by the Python backend.</p>
+    <hr>
+    <h2>API Response:</h2>
+    <p id="api-message">Loading data from backend...</p>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            fetch('/api/data')
+                .then(response => response.json())
+                .then(data => {
+                    const messageElement = document.getElementById('api-message');
+                    messageElement.innerHTML = `
+                        <strong>Message:</strong> ${data.message}<br>
+                        <strong>Status:</strong> ${data.status}<br>
+                        <strong>Port:</strong> ${data.service_port}
+                    `;
+                })
+                .catch(error => {
+                    console.error('Error fetching API data:', error);
+                    document.getElementById('api-message').textContent = 'Error: Could not connect to the backend API.';
+                });
+        });
+    </script>
+</body>
+</html>
