@@ -1,0 +1,25 @@
+{
+  "name": "Python Web Service (Flask)",
+  "image": "mcr.microsoft.com/devcontainers/python:3.11",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {}
+  },
+  "customizations": {
+    "vscode": {
+      "settings": {},
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance"
+      ]
+    }
+  },
+  "postCreateCommand": "pip install -r requirements.txt",
+  "portsAttributes": {
+    "5000": {
+      "label": "Web Service",
+      "onAutoForward": "notify"
+    }
+  },
+  "forwardPorts": [5000],
+  "remoteUser": "vscode"
+}
