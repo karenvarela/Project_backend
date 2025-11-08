@@ -1,0 +1,1328 @@
+openapi: 3.0.3
+info:
+  title: Gestor de Proyectos API
+  description: |
+    API RESTful para la gestión de proyectos, tareas, usuarios y estatus.
+    Esta especificación está pensada como contrato para desarrollo, documentación y pruebas
+  version: 2.0.0
+  contact:
+    name: Equipo 3
+    email: equipo3@tec.com.mx
+servers:
+  - url: https://api.proyectos.example.com/v1
+    description: Entorno de Producción (simulado)
+  - url: http://localhost:8080/v1
+    description: Entorno de Desarrollo Local
+security:
+  - BearerAuth: []
+tags:
+  - name: Auth
+    description: Autenticación y registro
+  - name: Users
+    description: Administración de usuarios
+  - name: Projects
+    description: Administración de proyectos
+  - name: Tasks
+    description: Administración de tareas
+
+paths:
+  /auth/register:
+    post:
+      tags:
+        - Auth
+      summary: Registrar un nuevo usuario
+      operationId: registerUser
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+            examples:
+              ejemplo:
+                value:
+                  name: Usuario Ejemplo
+                  email: usuario@example.com
+                  password: Contraseña123
+      responses:
+        '201':
+          description: Usuario registrado correctamente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+              examples:
+                ejemplo:
+                  value:
+                    id: usr_001
+                    name: Usuario Ejemplo
+                    email: usuario@example.com
+                    role: member
+                    createdAt: "2024-11-01T10:00:00Z"
+                    updatedAt: null
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+
+  /auth/login:
+    post:
+      tags:
+        - Auth
+      summary: Iniciar sesión y obtener token JWT
+      operationId: login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthLoginRequest'
+            examples:
+              ejemplo:
+                value:
+                  email: usuario@tec.mx
+                  password: Contraseña123
+      responses:
+        '200':
+          description: Autenticación exitosa.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthLoginResponse'
+              examples:
+                ejemplo:
+                  value:
+                    accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                    tokenType: Bearer
+                    expiresIn: 3600
+                    user:
+                      id: usr_001
+                      name: Usuario Ejemplo
+                      email: usuario@tec.mx
+                      role: member
+                      createdAt: "2024-11-01T10:00:00Z"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /users:
+    get:
+      tags:
+        - Users
+      summary: Listar usuarios (con paginación y filtro por correo)
+      operationId: listUsers
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: email
+          description: Filtrar por email exacto
+          required: false
+          schema:
+            type: string
+            format: email
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Número de página
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Tamaño de página
+      responses:
+        '200':
+          description: Lista de usuarios.
+          headers:
+            X-Total-Count:
+              description: Total de elementos para la consulta
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+              examples:
+                ejemplo:
+                  value:
+                    data:
+                      - id: usr_001
+                        name: Alejandro
+                        email: ale@example.com
+                        role: member
+                        createdAt: "2024-11-01T10:00:00Z"
+                        updatedAt: null
+                      - id: usr_002
+                        name: María
+                        email: maria@example.com
+                        role: admin
+                        createdAt: "2024-10-15T08:30:00Z"
+                        updatedAt: "2024-10-20T14:15:00Z"
+                    meta:
+                      page: 1
+                      limit: 20
+                      total: 2
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+    post:
+      tags:
+        - Users
+      summary: Crear usuario (solo administradores)
+      operationId: createUser
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+      responses:
+        '201':
+          description: Usuario creado correctamente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+
+  /users/{userId}:
+    parameters:
+      - in: path
+        name: userId
+        required: true
+        description: ID del usuario
+        schema:
+          type: string
+    get:
+      tags:
+        - Users
+      summary: Obtener detalle de usuario
+      operationId: getUserById
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Usuario encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+              examples:
+                ejemplo:
+                  value:
+                    id: usr_123
+                    name: Alejandro
+                    email: ale@example.com
+                    role: member
+                    createdAt: "2024-11-01T10:00:00Z"
+                    updatedAt: null
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    put:
+      tags:
+        - Users
+      summary: Reemplazar completamente un usuario
+      operationId: replaceUser
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+      responses:
+        '200':
+          description: Usuario actualizado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    patch:
+      tags:
+        - Users
+      summary: Actualizar parcialmente un usuario
+      operationId: updateUser
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdate'
+      responses:
+        '200':
+          description: Usuario actualizado parcialmente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    delete:
+      tags:
+        - Users
+      summary: Eliminar usuario
+      operationId: deleteUser
+      security:
+        - BearerAuth: []
+      responses:
+        '204':
+          description: Usuario eliminado (sin contenido).
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /projects:
+    get:
+      tags:
+        - Projects
+      summary: Listado de proyectos (filtros por propietario y estado)
+      operationId: listProjects
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: ownerId
+          schema:
+            type: string
+          description: Filtrar por ID del propietario
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum:
+              - active
+              - archived
+          description: Estado del proyecto
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Número de página
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Tamaño de página
+      responses:
+        '200':
+          description: Lista de proyectos.
+          headers:
+            X-Total-Count:
+              description: Total de elementos para la consulta
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Project'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+    post:
+      tags:
+        - Projects
+      summary: Crear un proyecto
+      operationId: createProject
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectCreate'
+            examples:
+              ejemplo:
+                value:
+                  name: Lanzamiento App Mobile
+                  description: Proyecto para el desarrollo de la aplicación móvil
+                  startDate: "2024-11-01"
+      responses:
+        '201':
+          description: Proyecto creado con éxito.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+              examples:
+                ejemplo:
+                  value:
+                    id: prj_001
+                    name: Lanzamiento App Mobile
+                    description: Proyecto para el desarrollo de la aplicación móvil
+                    status: active
+                    ownerId: usr_123
+                    startDate: "2024-11-01"
+                    endDate: null
+                    createdAt: "2024-11-01T10:00:00Z"
+                    updatedAt: null
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /projects/{projectId}:
+    parameters:
+      - in: path
+        name: projectId
+        required: true
+        schema:
+          type: string
+        description: ID del proyecto
+    get:
+      tags:
+        - Projects
+      summary: Obtener detalle de un proyecto
+      operationId: getProjectById
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Proyecto encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    put:
+      tags:
+        - Projects
+      summary: Reemplazar completamente un proyecto
+      operationId: replaceProject
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectCreate'
+      responses:
+        '200':
+          description: Proyecto actualizado con éxito.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    patch:
+      tags:
+        - Projects
+      summary: Actualizar parcialmente un proyecto
+      operationId: updateProject
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectUpdate'
+      responses:
+        '200':
+          description: Proyecto actualizado parcialmente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    delete:
+      tags:
+        - Projects
+      summary: Eliminar proyecto
+      operationId: deleteProject
+      security:
+        - BearerAuth: []
+      responses:
+        '204':
+          description: Proyecto eliminado (sin contenido).
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /projects/{projectId}/tasks:
+    get:
+      tags:
+        - Tasks
+      summary: Listar tareas de un proyecto (filtros por estado y asignado)
+      operationId: listProjectTasks
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: projectId
+          required: true
+          schema:
+            type: string
+          description: ID del proyecto
+        - in: query
+          name: state
+          schema:
+            type: string
+            enum:
+              - programada
+              - en_progreso
+              - finalizada
+              - pausada
+              - cancelada
+          description: Estado de la tarea
+        - in: query
+          name: assignedTo
+          schema:
+            type: string
+          description: ID del usuario asignado
+      responses:
+        '200':
+          description: Lista de tareas del proyecto.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Task'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    post:
+      tags:
+        - Tasks
+      summary: Crear una tarea dentro de un proyecto
+      operationId: createProjectTask
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: projectId
+          required: true
+          schema:
+            type: string
+          description: ID del proyecto
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskCreate'
+            examples:
+              ejemplo:
+                value:
+                  title: Diseñar mockups de la interfaz
+                  description: Crear diseños de alta fidelidad para las pantallas principales
+                  assignedTo: usr_123
+                  dueDate: "2024-11-15"
+      responses:
+        '201':
+          description: Tarea creada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+              examples:
+                ejemplo:
+                  value:
+                    id: tsk_001
+                    projectId: prj_001
+                    title: Diseñar mockups de la interfaz
+                    description: Crear diseños de alta fidelidad para las pantallas principales
+                    state: programada
+                    assignedTo: usr_123
+                    dueDate: "2024-11-15"
+                    createdAt: "2024-11-01T10:00:00Z"
+                    updatedAt: null
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /tasks:
+    get:
+      tags:
+        - Tasks
+      summary: Listar tareas (global) con filtros
+      operationId: listTasks
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: projectId
+          schema:
+            type: string
+          description: Filtrar por proyecto
+        - in: query
+          name: state
+          schema:
+            type: string
+            enum:
+              - programada
+              - en_progreso
+              - finalizada
+              - pausada
+              - cancelada
+        - in: query
+          name: assignedTo
+          schema:
+            type: string
+        - in: query
+          name: dueBefore
+          schema:
+            type: string
+            format: date
+          description: Fecha límite anterior a
+      responses:
+        '200':
+          description: Lista de tareas.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Task'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /tasks/{taskId}:
+    parameters:
+      - in: path
+        name: taskId
+        required: true
+        schema:
+          type: string
+        description: ID de la tarea
+    get:
+      tags:
+        - Tasks
+      summary: Obtener detalle de una tarea
+      operationId: getTaskById
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Tarea encontrada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    put:
+      tags:
+        - Tasks
+      summary: Reemplazar completamente una tarea
+      operationId: replaceTask
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskCreate'
+      responses:
+        '200':
+          description: Tarea actualizada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    patch:
+      tags:
+        - Tasks
+      summary: Actualizar parcialmente una tarea
+      operationId: updateTask
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskUpdate'
+      responses:
+        '200':
+          description: Tarea actualizada parcialmente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    delete:
+      tags:
+        - Tasks
+      summary: Eliminar una tarea
+      operationId: deleteTask
+      security:
+        - BearerAuth: []
+      responses:
+        '204':
+          description: Tarea eliminada (sin contenido).
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /tasks/{taskId}/state:
+    parameters:
+      - in: path
+        name: taskId
+        required: true
+        schema:
+          type: string
+        description: ID de la tarea
+    patch:
+      tags:
+        - Tasks
+      summary: Cambiar el estado de una tarea
+      operationId: setTaskState
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskStateUpdate'
+            examples:
+              ejemplo:
+                value:
+                  state: en_progreso
+      responses:
+        '200':
+          description: Estado actualizado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /tasks/{taskId}/assignee:
+    parameters:
+      - in: path
+        name: taskId
+        required: true
+        schema:
+          type: string
+        description: ID de la tarea
+    put:
+      tags:
+        - Tasks
+      summary: Asignar responsable a una tarea
+      operationId: assignTask
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskAssigneeUpdate'
+            examples:
+              ejemplo:
+                value:
+                  userId: usr_123
+      responses:
+        '200':
+          description: Tarea asignada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    delete:
+      tags:
+        - Tasks
+      summary: Desasignar responsable de una tarea
+      operationId: unassignTask
+      security:
+        - BearerAuth: []
+      responses:
+        '204':
+          description: Tarea desasignada (sin contenido).
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Autenticación mediante token JWT en el encabezado Authorization (Bearer).
+
+  responses:
+    NotFoundError:
+      description: Recurso no encontrado.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            ejemplo:
+              value:
+                codigo: NOT_FOUND
+                mensaje: El recurso solicitado no existe.
+
+    BadRequestError:
+      description: Solicitud inválida.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            ejemplo:
+              value:
+                codigo: BAD_REQUEST
+                mensaje: Parámetros inválidos o faltantes.
+
+    UnauthorizedError:
+      description: Acceso no autorizado.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            ejemplo:
+              value:
+                codigo: UNAUTHORIZED
+                mensaje: Token ausente o inválido.
+
+    ForbiddenError:
+      description: Acceso prohibido. El usuario no tiene permisos suficientes.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            ejemplo:
+              value:
+                codigo: FORBIDDEN
+                mensaje: No tiene permisos para realizar esta operación.
+
+    ConflictError:
+      description: Conflicto. El recurso ya existe o hay un conflicto de estado.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            ejemplo:
+              value:
+                codigo: CONFLICT
+                mensaje: El email ya está registrado en el sistema.
+
+    InternalServerError:
+      description: Error interno del servidor.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            ejemplo:
+              value:
+                codigo: INTERNAL_ERROR
+                mensaje: Ocurrió un error inesperado en el servidor.
+
+  schemas:
+    Error:
+      type: object
+      description: Estructura de error estándar de la API
+      properties:
+        codigo:
+          type: string
+          description: Código de error identificador
+          example: NOT_FOUND
+        mensaje:
+          type: string
+          description: Mensaje descriptivo del error
+          example: El recurso solicitado no existe.
+        detalles:
+          type: array
+          description: Detalles adicionales del error (opcional)
+          items:
+            type: object
+            properties:
+              campo:
+                type: string
+              razon:
+                type: string
+      required:
+        - codigo
+        - mensaje
+
+    PaginationMeta:
+      type: object
+      description: Metadatos de paginación para listados.
+      properties:
+        page:
+          type: integer
+          description: Página actual
+          example: 1
+        limit:
+          type: integer
+          description: Elementos por página
+          example: 20
+        total:
+          type: integer
+          description: Total de elementos disponibles
+          example: 128
+      required:
+        - page
+        - limit
+        - total
+
+    User:
+      type: object
+      description: Representa a un usuario registrado en el sistema.
+      properties:
+        id:
+          type: string
+          description: Identificador único del usuario
+          example: usr_123
+        name:
+          type: string
+          description: Nombre completo del usuario
+          example: Alejandro
+        email:
+          type: string
+          format: email
+          description: Correo electrónico del usuario
+          example: ale@example.com
+        role:
+          type: string
+          description: Rol del usuario en la plataforma
+          enum:
+            - admin
+            - member
+          example: member
+        createdAt:
+          type: string
+          format: date-time
+          description: Fecha y hora de creación del usuario
+        updatedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Fecha y hora de última actualización
+      required:
+        - id
+        - name
+        - email
+        - role
+        - createdAt
+
+    UserCreate:
+      type: object
+      description: Datos para crear o reemplazar un usuario.
+      properties:
+        name:
+          type: string
+          description: Nombre completo del usuario
+          minLength: 2
+          maxLength: 100
+        email:
+          type: string
+          format: email
+          description: Correo electrónico único
+        password:
+          type: string
+          description: Contraseña del usuario
+          minLength: 6
+          maxLength: 100
+        role:
+          type: string
+          description: Rol asignado al usuario
+          enum:
+            - admin
+            - member
+          default: member
+      required:
+        - name
+        - email
+        - password
+
+    UserUpdate:
+      type: object
+      description: Datos para actualización parcial de usuario.
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+        password:
+          type: string
+          minLength: 6
+          maxLength: 100
+        role:
+          type: string
+          enum:
+            - admin
+            - member
+
+    Project:
+      type: object
+      description: Proyecto dentro del sistema.
+      properties:
+        id:
+          type: string
+          description: Identificador único del proyecto
+          example: prj_001
+        name:
+          type: string
+          description: Nombre del proyecto
+          example: Lanzamiento App
+        description:
+          type: string
+          nullable: true
+          description: Descripción detallada del proyecto
+        status:
+          type: string
+          description: Estado actual del proyecto
+          enum:
+            - active
+            - archived
+          default: active
+        ownerId:
+          type: string
+          description: ID del usuario propietario del proyecto
+          example: usr_123
+        startDate:
+          type: string
+          format: date
+          nullable: true
+          description: Fecha de inicio del proyecto
+        endDate:
+          type: string
+          format: date
+          nullable: true
+          description: Fecha de finalización del proyecto
+        createdAt:
+          type: string
+          format: date-time
+          description: Fecha y hora de creación
+        updatedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Fecha y hora de última actualización
+      required:
+        - id
+        - name
+        - status
+        - ownerId
+        - createdAt
+
+    ProjectCreate:
+      type: object
+      description: Datos para crear o reemplazar un proyecto.
+      properties:
+        name:
+          type: string
+          description: Nombre del proyecto
+          minLength: 3
+          maxLength: 200
+        description:
+          type: string
+          nullable: true
+          description: Descripción del proyecto
+          maxLength: 1000
+        startDate:
+          type: string
+          format: date
+          nullable: true
+          description: Fecha de inicio planeada
+      required:
+        - name
+
+    ProjectUpdate:
+      type: object
+      description: Datos para actualización parcial de proyecto.
+      properties:
+        name:
+          type: string
+          minLength: 3
+          maxLength: 200
+        description:
+          type: string
+          nullable: true
+          maxLength: 1000
+        status:
+          type: string
+          enum:
+            - active
+            - archived
+        endDate:
+          type: string
+          format: date
+          nullable: true
+
+    Task:
+      type: object
+      description: Tarea asociada a un proyecto.
+      properties:
+        id:
+          type: string
+          description: Identificador único de la tarea
+          example: tsk_001
+        projectId:
+          type: string
+          description: ID del proyecto al que pertenece
+          example: prj_001
+        title:
+          type: string
+          description: Título de la tarea
+          example: Diseñar mockups
+        description:
+          type: string
+          nullable: true
+          description: Descripción detallada de la tarea
+        state:
+          type: string
+          description: Estado actual de la tarea
+          enum: &taskStates
+            - programada
+            - en_progreso
+            - finalizada
+            - pausada
+            - cancelada
+          default: programada
+        assignedTo:
+          type: string
+          example: usr_999
+          nullable: true
+          description: ID del usuario asignado a la tarea
+        dueDate:
+          type: string
+          format: date
+          nullable: true
+          description: Fecha límite de entrega
+        createdAt:
+          type: string
+          format: date-time
+          description: Fecha y hora de creación
+        updatedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Fecha y hora de última actualización
+      required:
+        - id
+        - projectId
+        - title
+        - state
+        - createdAt
+
+    TaskCreate:
+      type: object
+      description: Datos para crear o reemplazar una tarea.
+      properties:
+        title:
+          type: string
+          description: Título de la tarea
+          minLength: 3
+          maxLength: 200
+        description:
+          type: string
+          nullable: true
+          description: Descripción de la tarea
+          maxLength: 2000
+        assignedTo:
+          type: string
+          nullable: true
+          description: ID del usuario asignado
+        dueDate:
+          type: string
+          format: date
+          nullable: true
+          description: Fecha límite
+      required:
+        - title
+
+    TaskUpdate:
+      type: object
+      description: Datos para actualización parcial de tarea.
+      properties:
+        title:
+          type: string
+          minLength: 3
+          maxLength: 200
+        description:
+          type: string
+          nullable: true
+          maxLength: 2000
+        state:
+          type: string
+          enum: *taskStates
+        assignedTo:
+          type: string
+          nullable: true
+        dueDate:
+          type: string
+          format: date
+          nullable: true
+
+    AuthLoginRequest:
+      type: object
+      description: Datos de autenticación para inicio de sesión.
+      properties:
+        email:
+          type: string
+          format: email
+          description: Correo electrónico del usuario
+        password:
+          type: string
+          description: Contraseña del usuario
+          minLength: 6
+      required:
+        - email
+        - password
+
+    AuthLoginResponse:
+      type: object
+      description: Respuesta exitosa de autenticación.
+      properties:
+        accessToken:
+          type: string
+          description: Token JWT de acceso
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        tokenType:
+          type: string
+          description: Tipo de token
+          example: Bearer
+        expiresIn:
+          type: integer
+          description: Tiempo de expiración en segundos
+          example: 3600
+        user:
+          $ref: '#/components/schemas/User'
+          description: Información del usuario autenticado
+      required:
+        - accessToken
+        - tokenType
+        - expiresIn
+
+    TaskStateUpdate:
+      type: object
+      description: Actualización del estado de una tarea.
+      properties:
+        state:
+          type: string
+          enum: *taskStates
+          description: Nuevo estado de la tarea.
+      required:
+        - state
+
+    TaskAssigneeUpdate:
+      type: object
+      description: Asignación de responsable a una tarea.
+      properties:
+        userId:
+          type: string
+          description: ID del usuario a asignar
+          example: usr_123
+      required:
+        - userId
